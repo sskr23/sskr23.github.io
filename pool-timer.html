@@ -99,6 +99,7 @@
         let stlength_use = 0;
         let stlength_set = null;
         const stlength_default = 40;
+        const startCounting = 10.2;
         let cctimer_A = null;
         let cctimer_B = null;
         let nameA = "";
@@ -146,8 +147,8 @@
                 //繰り返し実行部。
                 //関数として内部操作を定義してしまうと使えない？
                 stimer = setInterval((diff) => {
-                    //残り秒数が0より大きい場合に動作
-                    if (stlength > 0) {
+                    //残り秒数が0より大きい場合に動作　マイナス1までで問題ある？
+                    if (stlength > -1) {
                         stlength -= diff;
                         document.getElementById('stime-display').innerText = `${showTime(stlength)}`;
                         //document.getElementById('stime-display').innerText = `Current timer: ${stimer}, now: ${roundTime(stlength)}`;
@@ -155,8 +156,11 @@
                         clearInterval(stimer);
                         //能動的にタイマー変数を破棄する。
                         stimer = null;
+                        countSound.pause();
+                        countSound.currentTime = 0;
+                        isCalling = false;
                     }
-                    if (stlength <= 10 && isCalling != true) {
+                    if (stlength <= 10.2 && isCalling != true && stlength > 0) {
                         countSound.play();
                         isCalling = true;
                     }
