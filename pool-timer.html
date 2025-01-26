@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width,initial-scale=1.0,minimum-scale=1.0,maximum-scale=1.0,user-scalable=no" />
+    <title>便利タイマー</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+        }
+
+        #app {
+            /*text-align: center;*/
+        }
+
+
+        button {
+            width: 200px;
+            padding: 15px;
+            font-size: 20px;
+            background-color: rgb(210, 210, 210);
+            border-radius: 10px;
+            border-width: 0;
+            margin-bottom: 30px;
+            color: black;
+        }
+
+        green-circle {
+            text-align: center;
+            display: inline-block;
+            /* センター寄せ用 */
+            background-color: rgb(0, 255, 0);
+            /* ベースカラー */
+            /* box-shadow: 0 0 3px 3px rgb(224, 255, 211), 3px 3px 5px 3px rgb(200, 255, 0) inset;*/
+            /* 外側のカラー・左上のカラー */
+            height: 10px;
+            /* 円の大きさ */
+            width: 10px;
+            /* 円の大きさ */
+            border-radius: 50%;
+            /* まるみ */
+            /* 以下はそろえるだけの為のmargin 
+            margin-right: 10px;
+            margin-bottom: 5px;
+            margin-top: 2px;*/
+        }
+
+        yellow-circle {
+            display: inline-block;
+            background-color: rgb(255, 230, 0);
+            box-shadow: 0 0 3px 3px rgb(251, 255, 199), 3px 3px 5px 3px rgb(244, 255, 93) inset;
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            margin-right: 10px;
+            margin-bottom: 5px;
+            margin-top: 2px;
+        }
+
+        red-circle {
+            display: inline-block;
+            background-color: rgb(255, 0, 0);
+            /*box-shadow: 0 0 3px 3px rgb(255, 213, 213), 3px 3px 5px 3px rgb(255, 166, 0) inset;*/
+            height: 10px;
+            width: 10px;
+            border-radius: 50%;
+            /*
+            margin-right: 10px;
+            margin-bottom: 5px;
+            margin-top: 2px;*/
+        }
+
+        #stime-display {
+            font-size: 50px;
+            margin-bottom: 30px;
+        }
+
+        #cctime-display {
+            font-size: 50px;
+            margin-bottom: 30px;
+        }
+
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin: 5px;
+            cursor: pointer;
+        }
+    </style>
+    <script>
+        //関数をまたいで操作したい変数はここで定義しておく。
+        let stimer = null;
+        let stlength = 0;
+        let stlength_use = 0;
+        let stlength_set = null;
+        const stlength_default = 40;
+        let cctimer_A = null;
+        let cctimer_B = null;
+        let nameA = "";
+        let nameB = "";
+        let cctlength_A = 0;
+        let cctlength_B = 0;
+        let cctlength_use = 0;
+        let cctlength_set = null;
+        let isCCworking = false;
+        const cctlength_default = 1500;
+        let isPlayerA = true;
+        let isPlayerB = false;
+        //使っていないけど、コメントアウトしないものたち
+        let isPaused = true;
+        let remainingTime = 40; // 初期時間       
+        // for timer
+        const repeat_ms = 100; // m second
+        const decrement_time = 0.1;// second, basicaly should be identical to repeat_ms
+        //let warningInterval; 
+        //const warningTime = 10; // 警告音を開始する時間
+        // sounds 
+        // ピン！
+        let isCalling = false;
+        const startSound = new Audio('./sound/test_sound_01.mp3');
+        // ポン
+        const pauseSound = new Audio('./sound/test_sound_02.mp3');
+        const countSound = new Audio('./sound/countdown.mp3');
+        // カチャ
+        const clearSound = new Audio('./sound/pause.mp3');
+
+        function executeTimer() {
+            //タイマーの重複起動を防ぐ
+            if (stimer == null) {
+                //設定から秒数の変更があった場合。反映させる。
+                if (stlength_set != null) {
+                    stlength_use = stlength_set;
+                }
+                //タイマー終了後か、初回起動時に秒数を初期化。
+                //この処理により、再開時には秒数の変更がおきないはず。
+                if (stlength <= 0) {
+                    stlength = stlength_use;
+                }
+                //押したときの音声の再生！！
+                play(startSound);
+                //繰り返し実行部。
+                //関数として内部操作を定義してしまうと使えない？
+                stimer = setInterval((diff) => {
+                    //残り秒数が0より大きい場合に動作
+                    if (stlength > 0) {
+                        stlength -= diff;
+                        document.getElementById('stime-display').innerText = `${showTime(stlength)}`;
+                        //document.getElementById('stime-display').innerText = `Current timer: ${stimer}, now: ${roundTime(stlength)}`;
+                    } else {
+                        clearInterval(stimer);
+                        //能動的にタイマー変数を破棄する。
+                        stimer = null;
+                    }
+                    if (stlength <= 10 && isCalling != true) {
+                        countSound.play();
+                        isCalling = true;
+                    }
+                }, repeat_ms, decrement_time);
+                //isPaused = false;
+            }
+        }
+
+        function executeTimers() {
+            if (cctimer_A == null || cctimer_B == null) {
+                if (cctlength_set != null) {
+                    cctlength_use = cctlength_set;
+                }
+                if (cctlength_A <= 0) {
+                    cctlength_A = cctlength_use;
+                }
+                if (cctlength_B <= 0) {
+                    cctlength_B = cctlength_use;
+                }
+                //押したときの音声の再生！！
+                play(startSound);
+                isCCworking = true;
+                cctimer_A = setInterval((diff) => {
+                    //残り秒数が0より大きい場合に動作
+                    if (cctlength_A > 0) {
+                        if (isPlayerA == true) {
+                            cctlength_A -= diff;
+                        }
+                        document.getElementById('cctime-display').innerText = `${showTime(cctlength_A)} - ${showTime(cctlength_B)}`;
+                        //document.getElementById('stime-display').innerText = `Current timer: ${stimer}, now: ${roundTime(stlength)}`;
+                    } else {
+                        clearInterval(cctimer_A);
+                        //能動的にタイマー変数を破棄する。
+                        cctimer_A = null;
+                    }
+                }, repeat_ms, decrement_time);
+                cctimer_B = setInterval((diff) => {
+                    //残り秒数が0より大きい場合に動作
+                    if (cctlength_B > 0) {
+                        if (isPlayerB == true) {
+                            cctlength_B -= diff;
+                        }
+                        document.getElementById('cctime-display').innerText = `${showTime(cctlength_A)} - ${showTime(cctlength_B)}`;
+                        //document.getElementById('stime-display').innerText = `Current timer: ${stimer}, now: ${roundTime(stlength)}`;
+                    } else {
+                        clearInterval(cctimer_B);
+                        //能動的にタイマー変数を破棄する。
+                        cctimer_B = null;
+                    }
+                }, repeat_ms, decrement_time);
+            }
+        }
+
+
+        function disableA() {
+            //押したときの音声の再生！！
+            play(pauseSound);
+            isPlayerA = false;
+            isPlayerB = true;
+            document.getElementById("buttonA").style.background = "#ff0000";
+            document.getElementById("buttonB").style.background = "#00ff00";
+            if (cctimer_A != null) {
+                clearIntercal(cctimer_A);
+                cctimer_A = null;
+            }
+            if (cctimer_B == null && isCCworking == true) {
+                executeTimers()
+            }
+        }
+
+        function disableB() {
+            //押したときの音声の再生！！
+            play(pauseSound);
+            isPlayerB = false;
+            isPlayerA = true;
+            document.getElementById("buttonB").style.background = "#ff0000";
+            document.getElementById("buttonA").style.background = "#00ff00";
+            if (cctimer_B != null) {
+                clearIntercal(cctimer_B);
+                cctimer_B = null;
+            }
+            if (cctimer_A == null && isCCworking == true) {
+                executeTimers()
+            }
+        }
+
+
+        function clearTimerA() {
+            //タイマーが存在するときにだけ動作
+            if (cctimer_A != null) {
+                //動作の停止
+                clearInterval(cctimer_A);
+                //タイマーの破棄。停止後もタイマーは残り続けている。
+                cctimer_A = null;
+                //タイマーを破棄したので秒数も初期化。初回起動時と区別するために-1。
+                cctlength_A = -1;
+                //リセットしたことを明らかにするため0を表示。
+                document.getElementById('cctime-display').innerText = `${showTime(cctlength_A)} - ${showTime(cctlength_B)}`;
+            } else { //一時停止状態で新しくタイマーを始めたい場合を想定。一時停止時にタイマーは破棄されているので、残り時間だけ操作。
+                //押したときの音声の再生！！
+                cctlength_A = -1;
+                document.getElementById('cctime-display').innerText = `${showTime(cctlength_A)} - ${showTime(cctlength_B)}`;
+            }
+        }
+
+        function clearTimerB() {
+            //タイマーが存在するときにだけ動作
+            if (cctimer_B != null) {
+                //動作の停止
+                clearInterval(cctimer_B);
+                //タイマーの破棄。停止後もタイマーは残り続けている。
+                cctimer_B = null;
+                //タイマーを破棄したので秒数も初期化。初回起動時と区別するために-1。
+                cctlength_B = -1;
+                //リセットしたことを明らかにするため0を表示。
+                document.getElementById('cctime-display').innerText = `${showTime(cctlength_A)} - ${showTime(cctlength_B)}`;
+            } else { //一時停止状態で新しくタイマーを始めたい場合を想定。一時停止時にタイマーは破棄されているので、残り時間だけ操作。
+                //押したときの音声の再生！！
+                cctlength_B = -1;
+                document.getElementById('cctime-display').innerText = `${showTime(cctlength_A)} - ${showTime(cctlength_B)}`;
+            }
+        }
+
+        function clearTimers() {
+            //押したときの音声の再生！！
+            play(clearSound)
+            clearTimerA()
+            clearTimerB()
+        }
+
+        //OK
+        function clearTimer() {
+            //タイマーが存在するときにだけ動作
+            if (stimer != null) {
+                //操作するタイマーを表示
+                document.getElementById('stime-debug').innerText = `Existing timer will be removed: ${stimer}`;
+                //押したときの音声の再生！！
+                play(clearSound)
+                //動作の停止
+                clearInterval(stimer);
+                //タイマーの破棄。停止後もタイマーは残り続けている。
+                stimer = null;
+                //タイマーを破棄したので秒数も初期化。初回起動時と区別するために-1。
+                stlength = -1;
+                //リセットしたことを明らかにするため0を表示。
+                document.getElementById('stime-display').innerText = `${showTime(stlength)}`;
+                if (isCalling == true) {
+                    countSound.pause();
+                    countSound.currentTime = 0;
+                    isCalling = false;
+                }
+            } else { //一時停止状態で新しくタイマーを始めたい場合を想定。一時停止時にタイマーは破棄されているので、残り時間だけ操作。
+                //押したときの音声の再生！！
+                play(clearSound)
+                stlength = -1;
+                document.getElementById('stime-display').innerText = `${showTime(stlength)}`;
+                //if (isCalling == true) {
+                countSound.pause();
+                countSound.currentTime = 0;
+                isCalling = false;
+                //}
+            }
+        }
+
+
+        function pauseSTimerA() {
+            if (cctimer_A != null) {
+                clearInterval(cctimer_A);
+                cctimer_A = null;
+                isCCworking = false;
+            }
+        }
+
+        function pauseSTimerB() {
+            if (cctimer_B != null) {
+                clearInterval(cctimer_B);
+                cctimer_B = null;
+                isCCworking = false;
+            }
+        }
+
+        function pauseSTimers() {
+            //押したときの音声の再生！！
+            play(pauseSound);
+            pauseSTimerA();
+            pauseSTimerB();
+        }
+
+
+
+
+        function pauseSTimer() {
+            if (stimer != null) {
+                //押したときの音声の再生！！
+                play(pauseSound);
+                document.getElementById('stime-debug').innerText = `Existing timer will be stopped: ${stimer}`;
+                //isPaused = true;
+                clearInterval(stimer);
+                stimer = null;
+                if (isCalling == true) {
+                    countSound.pause();
+                    isCalling = false;
+                }
+                //countSound.pause();
+                //pauseSound.pray();
+                //cument.getElementById('stime-debug').innerText = `${stimer} s, ${isPaused} ss`;
+            }
+        }
+
+
+
+
+        function getNames() {
+            nameA = document.getElementById('nameA').value;
+            nameB = document.getElementById('nameB').value;
+            document.getElementById('buttonA').innerText = `${nameA}`;
+            document.getElementById('buttonB').innerText = `${nameB}`;
+        }
+
+        //デバッグ用
+        function playCount() {
+            //document.getElementById('stime-debug').innerText = `Step1: ${countSound.currentTime} s`; 
+            if (countSound.currentTime > 0) {
+                countSound.pause();
+                document.getElementById('stime-debug').innerText = `Step2: ${countSound.currentTime} s`;
+                countSound.currentTime = 0;
+                countSound.play();
+
+            } else {
+                countSound.play();
+                document.getElementById('stime-debug').innerText = `Step3: ${countSound.currentTime} s`;
+            }
+        }
+
+        //短い音声ファイルの再生用
+        function play(sound) {
+            //一時停止されていなければ。一旦止めて再度再生。
+            if (!sound.paused) {
+                sound.pause();
+                sound.currentTime = 0;
+            }
+            sound.play();
+        }
+
+
+        //時刻表示用
+        function showTime(time) {
+            if (time < 60 && time > 0) {
+                return `00:${addZero(roundMsec(time))}`
+            }
+            else if (time <= 0) {
+                return '00:00'
+            }
+            else {
+                rem_sec = time % 60
+                rem_min = (time - rem_sec) / 60
+                return `${addZero(rem_min)}:${addZero(roundMsec(rem_sec))}`
+            }
+        }
+
+
+        //10秒未満の時に0を足しているだけ、負の数は事前に省いてほしい。
+        function addZero(time) {
+            if (time < 10) {
+                return `0${time}`
+            } else {
+                return `${time}`
+            }
+        }
+
+
+        //端数切り上げ演算
+        function roundMsec(time) {
+            rem_msec = time % 1;
+            if (rem_msec > 0 && rem_msec < 1) {
+                return time - rem_msec + 1
+            } else {
+                return time - rem_msec
+            }
+        }
+        //executeTimeで置き換えてしまった。
+        function startSTimer() {
+            //document.getElementById('cctime-debug').innerText = `${timer} s`;
+            if (isPaused) {
+                //startSound.play(); // 開始音を再生
+                isPaused = false;
+                timer = setInterval(temp, 100, 0.1);
+            }
+            //document.getElementById('cctime-debug').innerText = `${timer} s`;
+        }
+
+        //内部で実行関数をよんでいるだけなので、いまは使っていない。
+        function resumeSTimer() {
+            if (isPaused || !timer) {
+                //countSound.play(); // 再開音を再生
+                // check weather this is correct
+                executeTimer();
+                isPaused = false;
+                document.getElementById('stime-debug').innerText = `${timer} s`;
+            } else {
+                document.getElementById('stime-debug').innerText = `current timer: ${timer} s`;
+            }
+        }
+
+        //現在、使用不可。
+        function countdown(diff) {
+            if (stlength >= 0) {
+                // タイマーの破棄まで、指定した時間間隔で、この関数が実行されつづける。調整中
+                stlength -= diff;
+                document.getElementById('stime-display').innerText = `now: ${stlength} s`;
+            } else {
+                clearInterval(Timer);
+            }
+        }
+
+        // for test
+        function debugShow() {
+            document.getElementById('stime-debug').innerText = `now: ${remainingTime} s`;
+        }
+        // Configurations 
+        function getCCTLength() {
+            cctlength_set = document.getElementById("cctdrop").value;
+            document.getElementById('cct-display').innerText = `Now: ${cctlength_set / 60} 分`;
+        }
+
+        function getSTLength() {
+            stlength_set = document.getElementById("stdrop").value;
+            document.getElementById('st-display').innerText = `Now: ${stlength_set} 秒`;
+        }
+        // initialization
+        window.onload = function () {
+            // This overwrites the text. There are innerText, textContent, and innerHTML
+            // document.getElementById('time-display').innerText = "Shunsuke";
+            document.getElementById('cct-display').innerText = `Default: ${cctlength_default / 60} 分`;
+            document.getElementById('st-display').innerText = `Default: ${stlength_default} 秒`;
+            cctlength_use = cctlength_default;
+            stlength_use = stlength_default;
+            document.getElementById("buttonB").style.background = "#ff0000";
+            document.getElementById("buttonA").style.background = "#00ff00";
+        };
+    </script>
+</head>
+
+<!-- what people see is the followings-->
+
+<body>
+    <h1>Chess Clock Timer</h1>
+
+    <div id="cctime-display">00:00 - 00:00</div>
+    <button id="buttonA" onclick="disableA()">Player A</button>
+    <button id="buttonB" onclick="disableB()">Player B</button>
+    <br />
+    <div id="green" style="color: #00ff00;">⚫︎動作中</div>
+    <div id="red" style="color: #ff0000;">⚫︎停止中</div>
+    <br />
+    <button onclick="pauseSTimers()">一時停止
+    </button>
+    <button onclick="executeTimers()">開始</button>
+    <button onclick="clearTimers()">破棄
+    </button>
+
+    <h1>Shot Timer</h1>
+    <div id="stime-display">00:00</div>
+    <!-- button implementations -->
+    <!--<button onclick="startSTimer()">開始</button>-->
+    <button onclick="pauseSTimer()">一時停止</button>
+    <!--<button onclick="resumeSTimer()">再開</button>-->
+    <!--<button onclick="playCount()">10 sound</button>-->
+    <button onclick="executeTimer()">開始</button>
+    <button onclick="clearTimer()">破棄</button>
+    <!--<button onclick="debugShow()">表示</button>-->
+
+    <h2>Configuration</h2>
+    <h3>Chess Clock Timer</h3>
+    <div id="cct-display">none</div>
+    <select id="cctdrop">
+        <option value=600>10 分</option>
+        <option value=1200>20 分</option>
+        <option value=1500>25 分</option>
+    </select>
+    <br />
+    <button onclick="getCCTLength()">反映</button>
+    <h3>Shot Timer</h3>
+    <div id="st-display">none</div>
+    <select id="stdrop">
+        <option value=10>10 秒</option>
+        <option value=12>12 秒</option>
+        <option value=40>40 秒</option>
+        <option value=50>50 秒</option>
+        <option value=70>70 秒</option>
+        <option value=200>200 秒</option>
+    </select>
+    <br />
+    <button onclick="getSTLength()">反映</button>
+    <h3>プレイヤー名</h3>
+    プレイヤーA：
+    <input type="text" id="nameA" />
+    <br />
+    プレイヤーB：
+    <input type="text" id="nameB" />
+    <br />
+    <button onclick="getNames()">設定</button>
+    <h3>debug messages for developers</h3>
+    <div id="stime-debug">none</div>
+    <div id="cctime-debug">none</div>
+</body>
+
+</html>
