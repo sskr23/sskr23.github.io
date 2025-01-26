@@ -148,9 +148,10 @@
                 //関数として内部操作を定義してしまうと使えない？
                 stimer = setInterval((diff) => {
                     //残り秒数が0より大きい場合に動作　マイナス1までで問題ある？
-                    if (stlength > -1) {
+                    if (stlength > -0.5
+                    ) {
                         stlength -= diff;
-                        document.getElementById('stime-display').innerText = `${showTime(stlength)}`;
+                        document.getElementById('stime-display').innerText = `${showTime(stlength)}, ${stlength}`;
                         //document.getElementById('stime-display').innerText = `Current timer: ${stimer}, now: ${roundTime(stlength)}`;
                     } else {
                         clearInterval(stimer);
