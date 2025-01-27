@@ -92,16 +92,16 @@
             margin: 5px;
             cursor: pointer;
         }
-    
+
         #buttonA {
             height: 100px;
             width: 300px;
         }
+
         #buttonB {
             height: 100px;
             width: 300px;
-        } 
-
+        }
     </style>
     <script>
         //関数をまたいで操作したい変数はここで定義しておく。
@@ -123,6 +123,7 @@
         const cctlength_default = 1500;
         let isPlayerA = true;
         let isPlayerB = false;
+        let isFirsttime = false;
         //使っていないけど、コメントアウトしないものたち
         let isPaused = true;
         let remainingTime = 40; // 初期時間       
@@ -143,6 +144,7 @@
 
         function executeTimer() {
             //タイマーの重複起動を防ぐ
+            mute_count_only_once();
             if (stimer == null) {
                 //設定から秒数の変更があった場合。反映させる。
                 if (stlength_set != null) {
@@ -183,6 +185,7 @@
         }
 
         function executeTimers() {
+            mute_count_only_once();
             if (cctimer_A == null || cctimer_B == null) {
                 if (cctlength_set != null) {
                     cctlength_use = cctlength_set;
@@ -229,7 +232,9 @@
 
 
         function disableA() {
+
             //押したときの音声の再生！！
+            mute_count_only_once();
             play(pauseSound);
             isPlayerA = false;
             isPlayerB = true;
@@ -246,6 +251,7 @@
 
         function disableB() {
             //押したときの音声の再生！！
+            mute_count_only_once();
             play(pauseSound);
             isPlayerB = false;
             isPlayerA = true;
@@ -299,6 +305,7 @@
 
         function clearTimers() {
             //押したときの音声の再生！！
+            mute_count_only_once();
             play(clearSound)
             clearTimerA()
             clearTimerB()
@@ -307,6 +314,7 @@
         //OK
         function clearTimer() {
             //タイマーが存在するときにだけ動作
+            mute_count_only_once();
             if (stimer != null) {
                 //操作するタイマーを表示
                 document.getElementById('stime-debug').innerText = `Existing timer will be removed: ${stimer}`;
@@ -357,6 +365,7 @@
 
         function pauseSTimers() {
             //押したときの音声の再生！！
+            mute_count_only_once();
             play(pauseSound);
             pauseSTimerA();
             pauseSTimerB();
@@ -366,6 +375,7 @@
 
 
         function pauseSTimer() {
+            mute_count_only_once();
             if (stimer != null) {
                 //押したときの音声の再生！！
                 play(pauseSound);
@@ -383,10 +393,22 @@
             }
         }
 
-
+        function mute_count_only_once() {
+            if (isFirsttime == false) {
+                isFirsttime = true;
+                countSound.mute = true;
+                countSound.play();
+                setTimeout(() => {
+                    countSound.pause();
+                    countSound.currentTime = 0;
+                }, 50);
+                countSound.mute = false;
+            }
+        }
 
 
         function getNames() {
+            mute_count_only_once();
             nameA = document.getElementById('nameA').value;
             nameB = document.getElementById('nameB').value;
             document.getElementById('buttonA').innerText = `${nameA}`;
@@ -495,11 +517,13 @@
         }
         // Configurations 
         function getCCTLength() {
+            mute_count_only_once();
             cctlength_set = document.getElementById("cctdrop").value;
             document.getElementById('cct-display').innerText = `Now: ${cctlength_set / 60} 分`;
         }
 
         function getSTLength() {
+            mute_count_only_once();
             stlength_set = document.getElementById("stdrop").value;
             document.getElementById('st-display').innerText = `Now: ${stlength_set} 秒`;
         }
@@ -507,17 +531,17 @@
         window.onload = function () {
             // This overwrites the text. There are innerText, textContent, and innerHTML
             // document.getElementById('time-display').innerText = "Shunsuke";
-            document.getElementById('cct-display').innerText = `Default: ${cctlength_default / 60} 分`;
-            document.getElementById('st-display').innerText = `Default: ${stlength_default} 秒`;
             cctlength_use = cctlength_default;
             stlength_use = stlength_default;
-            document.getElementById("buttonB").style.background = "#ff0000";
-            document.getElementById("buttonA").style.background = "#00ff00";
-            //countSound.muted = true;
             countSound.load();
             pauseSound.load();
             startSound.load();
             clearSound.load();
+            document.getElementById('cct-display').innerText = `Default: ${cctlength_default / 60} 分`;
+            document.getElementById('st-display').innerText = `Default: ${stlength_default} 秒`;
+            document.getElementById("buttonB").style.background = "#ff0000";
+            document.getElementById("buttonA").style.background = "#00ff00";
+            //countSound.muted = true;
             //setTimeout(() =>{countSound.pause()},10);
             //countSound.muted = false; 
 
