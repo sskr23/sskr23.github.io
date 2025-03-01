@@ -11,6 +11,7 @@
             font-family: Arial, sans-serif;
             text-align: center;
             margin-top: 50px;
+            font-size: 20px;
         }
 
         #app {
@@ -22,7 +23,7 @@
         button {
             width: 200px;
             padding: 15px;
-            font-size: 40px;
+            font-size: 50px;
             background-color: rgb(210, 210, 210);
             border-radius: 10px;
             border-width: 0;
@@ -88,7 +89,7 @@
 
         button {
             padding: 10px 20px;
-            font-size: 16px;
+            font-size: 28px;
             margin: 5px;
             cursor: pointer;
         }
@@ -113,6 +114,8 @@
         const startCounting = 10.2;
         let cctimer_A = null;
         let cctimer_B = null;
+        let isAextended = false;
+        let isBextended = false;
         let nameA = "";
         let nameB = "";
         let cctlength_A = 0;
@@ -135,7 +138,7 @@
         // sounds 
         // ピン！
         let isCalling = false;
-        const startSound = new Audio('./sound/test_sound_01.mp3');
+        const startSound = new Audio('./sound/test_sound_03.mp3');
         // ポン
         const pauseSound = new Audio('./sound/test_sound_02.mp3');
         const countSound = new Audio('./sound/countdown.mp3');
@@ -146,7 +149,7 @@
             //タイマーの重複起動を防ぐ
             mute_count_only_once();
             if (stimer == null) {
-                //設定から秒数の変更があった場合。反映させる。
+                //設定から秒数の変更があった場合。設定させる。
                 if (stlength_set != null) {
                     stlength_use = stlength_set;
                 }
@@ -168,7 +171,7 @@
                         //document.getElementById('stime-display').innerText = `Current timer: ${stimer}, now: ${roundTime(stlength)}`;
                     } else {
                         clearInterval(stimer);
-                        //能動的にタイマー変数を破棄する。
+                        //能動的にタイマー変数をリセットする。
                         stimer = null;
                         countSound.pause();
                         countSound.currentTime = 0;
@@ -209,7 +212,7 @@
                         //document.getElementById('stime-display').innerText = `Current timer: ${stimer}, now: ${roundTime(stlength)}`;
                     } else {
                         clearInterval(cctimer_A);
-                        //能動的にタイマー変数を破棄する。
+                        //能動的にタイマー変数をリセットする。
                         cctimer_A = null;
                     }
                 }, repeat_ms, decrement_time);
@@ -223,7 +226,7 @@
                         //document.getElementById('stime-display').innerText = `Current timer: ${stimer}, now: ${roundTime(stlength)}`;
                     } else {
                         clearInterval(cctimer_B);
-                        //能動的にタイマー変数を破棄する。
+                        //能動的にタイマー変数をリセットする。
                         cctimer_B = null;
                     }
                 }, repeat_ms, decrement_time);
@@ -272,13 +275,13 @@
             if (cctimer_A != null) {
                 //動作の停止
                 clearInterval(cctimer_A);
-                //タイマーの破棄。停止後もタイマーは残り続けている。
+                //タイマーのリセット。停止後もタイマーは残り続けている。
                 cctimer_A = null;
-                //タイマーを破棄したので秒数も初期化。初回起動時と区別するために-1。
+                //タイマーをリセットしたので秒数も初期化。初回起動時と区別するために-1。
                 cctlength_A = -1;
                 //リセットしたことを明らかにするため0を表示。
                 document.getElementById('cctime-display').innerText = `${showTime(cctlength_A)} - ${showTime(cctlength_B)}`;
-            } else { //一時停止状態で新しくタイマーを始めたい場合を想定。一時停止時にタイマーは破棄されているので、残り時間だけ操作。
+            } else { //一時停止状態で新しくタイマーを始めたい場合を想定。一時停止時にタイマーはリセットされているので、残り時間だけ操作。
                 //押したときの音声の再生！！
                 cctlength_A = -1;
                 document.getElementById('cctime-display').innerText = `${showTime(cctlength_A)} - ${showTime(cctlength_B)}`;
@@ -290,13 +293,13 @@
             if (cctimer_B != null) {
                 //動作の停止
                 clearInterval(cctimer_B);
-                //タイマーの破棄。停止後もタイマーは残り続けている。
+                //タイマーのリセット。停止後もタイマーは残り続けている。
                 cctimer_B = null;
-                //タイマーを破棄したので秒数も初期化。初回起動時と区別するために-1。
+                //タイマーをリセットしたので秒数も初期化。初回起動時と区別するために-1。
                 cctlength_B = -1;
                 //リセットしたことを明らかにするため0を表示。
                 document.getElementById('cctime-display').innerText = `${showTime(cctlength_A)} - ${showTime(cctlength_B)}`;
-            } else { //一時停止状態で新しくタイマーを始めたい場合を想定。一時停止時にタイマーは破棄されているので、残り時間だけ操作。
+            } else { //一時停止状態で新しくタイマーを始めたい場合を想定。一時停止時にタイマーはリセットされているので、残り時間だけ操作。
                 //押したときの音声の再生！！
                 cctlength_B = -1;
                 document.getElementById('cctime-display').innerText = `${showTime(cctlength_A)} - ${showTime(cctlength_B)}`;
@@ -322,9 +325,9 @@
                 play(clearSound)
                 //動作の停止
                 clearInterval(stimer);
-                //タイマーの破棄。停止後もタイマーは残り続けている。
+                //タイマーのリセット。停止後もタイマーは残り続けている。
                 stimer = null;
-                //タイマーを破棄したので秒数も初期化。初回起動時と区別するために-1。
+                //タイマーをリセットしたので秒数も初期化。初回起動時と区別するために-1。
                 stlength = -1;
                 //リセットしたことを明らかにするため0を表示。
                 document.getElementById('stime-display').innerText = `${showTime(stlength)}`;
@@ -333,7 +336,7 @@
                     countSound.currentTime = 0;
                     isCalling = false;
                 }
-            } else { //一時停止状態で新しくタイマーを始めたい場合を想定。一時停止時にタイマーは破棄されているので、残り時間だけ操作。
+            } else { //一時停止状態で新しくタイマーを始めたい場合を想定。一時停止時にタイマーはリセットされているので、残り時間だけ操作。
                 //押したときの音声の再生！！
                 play(clearSound)
                 stlength = -1;
@@ -406,6 +409,23 @@
             }
         }
 
+        function extentA() {
+            if (isAextended == false){
+                stlength = stlength + 40;
+                document.getElementById("exbuttonA").style.background = "#888888";
+                isAextended = true;
+            }
+        }
+
+        function extentB() {
+            if (isBextended == false){
+                stlength = stlength + 40;
+                document.getElementById("exbuttonB").style.background = "#888888"; 
+                isBextended = true;
+
+            }
+
+        } 
 
         function getNames() {
             mute_count_only_once();
@@ -413,6 +433,16 @@
             nameB = document.getElementById('nameB').value;
             document.getElementById('buttonA').innerText = `${nameA}`;
             document.getElementById('buttonB').innerText = `${nameB}`;
+            document.getElementById('exbuttonA').innerText = `extension ${nameA}`;
+            document.getElementById('exbuttonB').innerText = `extension ${nameB}`;
+        }
+
+        function extentReset() {
+            isAextended = false;
+            isBextended = false;
+            play(clearSound)
+            document.getElementById("exbuttonA").style.background = "rgb(210,210,210)";
+            document.getElementById("exbuttonB").style.background = "rgb(210,210,210)";
         }
 
         //デバッグ用
@@ -503,7 +533,7 @@
         //現在、使用不可。
         function countdown(diff) {
             if (stlength >= 0) {
-                // タイマーの破棄まで、指定した時間間隔で、この関数が実行されつづける。調整中
+                // タイマーのリセットまで、指定した時間間隔で、この関数が実行されつづける。調整中
                 stlength -= diff;
                 document.getElementById('stime-display').innerText = `now: ${stlength} s`;
             } else {
@@ -552,6 +582,22 @@
 <!-- what people see is the followings-->
 
 <body>
+
+    <h1>Shot Timer</h1>
+    <div id="stime-display">00:00</div>
+    <!-- button implementations -->
+    <!--<button onclick="startSTimer()">開始</button>-->
+    <button onclick="pauseSTimer()">一時停止</button>
+    <!--<button onclick="resumeSTimer()">再開</button>-->
+    <!--<button onclick="playCount()">10 sound</button>-->
+    <button onclick="executeTimer()">開始</button>
+    <button onclick="clearTimer()">リセット</button>
+    <!--<button onclick="debugShow()">表示</button>-->
+    <br />
+    <button id="exbuttonA" onclick="extentA()">extention Player A</button>
+    <button id="exbuttonB" onclick="extentB()">extention Player B</button> 
+    <button onclick="extentReset()">extention リセット</button> 
+
     <h1>Chess Clock Timer</h1>
 
     <div id="cctime-display">00:00 - 00:00</div>
@@ -564,30 +610,12 @@
     <button onclick="pauseSTimers()">一時停止
     </button>
     <button onclick="executeTimers()">開始</button>
-    <button onclick="clearTimers()">破棄
-    </button>
+    <button onclick="clearTimers()">リセット</button>
 
-    <h1>Shot Timer</h1>
-    <div id="stime-display">00:00</div>
-    <!-- button implementations -->
-    <!--<button onclick="startSTimer()">開始</button>-->
-    <button onclick="pauseSTimer()">一時停止</button>
-    <!--<button onclick="resumeSTimer()">再開</button>-->
-    <!--<button onclick="playCount()">10 sound</button>-->
-    <button onclick="executeTimer()">開始</button>
-    <button onclick="clearTimer()">破棄</button>
-    <!--<button onclick="debugShow()">表示</button>-->
+
 
     <h2>Configuration</h2>
-    <h3>Chess Clock Timer</h3>
-    <div id="cct-display">none</div>
-    <select id="cctdrop">
-        <option value=600>10 分</option>
-        <option value=1200>20 分</option>
-        <option value=1500>25 分</option>
-    </select>
-    <br />
-    <button onclick="getCCTLength()">反映</button>
+
     <h3>Shot Timer</h3>
     <div id="st-display">none</div>
     <select id="stdrop">
@@ -599,7 +627,18 @@
         <option value=200>200 秒</option>
     </select>
     <br />
-    <button onclick="getSTLength()">反映</button>
+    <button onclick="getSTLength()">設定</button>
+
+    <h3>Chess Clock Timer</h3>
+    <div id="cct-display">none</div>
+    <select id="cctdrop">
+        <option value=600>10 分</option>
+        <option value=1200>20 分</option>
+        <option value=1500>25 分</option>
+    </select>
+    <br />
+    <button onclick="getCCTLength()">設定</button>
+
     <h3>プレイヤー名</h3>
     プレイヤーA：
     <input type="text" id="nameA" />
