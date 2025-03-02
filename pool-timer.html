@@ -414,6 +414,9 @@
                 stlength = stlength + 40;
                 document.getElementById("exbuttonA").style.background = "#888888";
                 isAextended = true;
+                countSound.pause();
+                countSound.currentTime = 0;
+                isCalling = false;
             }
         }
 
@@ -422,6 +425,9 @@
                 stlength = stlength + 40;
                 document.getElementById("exbuttonB").style.background = "#888888"; 
                 isBextended = true;
+                countSound.pause();
+                countSound.currentTime = 0;
+                isCalling = false;
 
             }
 
