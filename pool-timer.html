@@ -122,8 +122,11 @@
         let cctlength_B = 0;
         let cctlength_use = 0;
         let cctlength_set = null;
+        let extlength_use = 0;
+        let extlength_set = null; 
         let isCCworking = false;
         const cctlength_default = 1500;
+        const extlength_default = 40;
         let isPlayerA = true;
         let isPlayerB = false;
         let isFirsttime = false;
@@ -411,7 +414,8 @@
 
         function extentA() {
             if (isAextended == false){
-                stlength = stlength + 40;
+                stlength = stlength + Number(extlength_use);
+                //document.getElementById("extime-debug").innerText = `${extlength_use}`;
                 document.getElementById("exbuttonA").style.background = "#888888";
                 isAextended = true;
                 countSound.pause();
@@ -422,7 +426,7 @@
 
         function extentB() {
             if (isBextended == false){
-                stlength = stlength + 40;
+                stlength = stlength + Number(extlength_use);
                 document.getElementById("exbuttonB").style.background = "#888888"; 
                 isBextended = true;
                 countSound.pause();
@@ -558,6 +562,14 @@
             document.getElementById('cct-display').innerText = `Now: ${cctlength_set / 60} 分`;
         }
 
+        function getEXTLength() {
+            mute_count_only_once();
+            extlength_set = document.getElementById("extdrop").value;
+            document.getElementById('ext-display').innerText = `Now: ${extlength_set} s`;
+            extlength_use = extlength_set;
+        }
+
+
         function getSTLength() {
             mute_count_only_once();
             stlength_set = document.getElementById("stdrop").value;
@@ -568,6 +580,7 @@
             // This overwrites the text. There are innerText, textContent, and innerHTML
             // document.getElementById('time-display').innerText = "Shunsuke";
             cctlength_use = cctlength_default;
+            extlength_use = extlength_default;
             stlength_use = stlength_default;
             countSound.load();
             pauseSound.load();
@@ -575,6 +588,8 @@
             clearSound.load();
             document.getElementById('cct-display').innerText = `Default: ${cctlength_default / 60} 分`;
             document.getElementById('st-display').innerText = `Default: ${stlength_default} 秒`;
+            document.getElementById('ext-display').innerText = `Default: ${extlength_default} 秒`;
+            
             document.getElementById("buttonB").style.background = "#ff0000";
             document.getElementById("buttonA").style.background = "#00ff00";
             //countSound.muted = true;
@@ -628,6 +643,7 @@
         <option value=10>10 秒</option>
         <option value=12>12 秒</option>
         <option value=40>40 秒</option>
+        <option value=45>45 秒</option> 
         <option value=50>50 秒</option>
         <option value=70>70 秒</option>
         <option value=200>200 秒</option>
@@ -645,6 +661,16 @@
     <br />
     <button onclick="getCCTLength()">設定</button>
 
+    <h3>Extension Length</h3>
+    <div id="ext-display">none</div>
+    <select id="extdrop">
+        <option value=40>40 秒</option>
+        <option value=45>45 秒</option>
+        <option value=50>50 秒</option> 
+    </select>
+    <br />
+    <button onclick="getEXTLength()">設定</button>
+
     <h3>プレイヤー名</h3>
     プレイヤーA：
     <input type="text" id="nameA" />
@@ -656,6 +682,7 @@
     <h3>debug messages for developers</h3>
     <div id="stime-debug">none</div>
     <div id="cctime-debug">none</div>
+    <div id="extime-debug">none</div> 
 </body>
 
 </html>
