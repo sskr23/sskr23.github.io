@@ -1,24 +1,20 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <title>3D 電場可視化（点電荷）</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <!-- HTML5 らしく semantic tags を使う -->
+  <meta charset="UTF-8">
+  <title>2D 電場ベクトル可視化（点電荷）</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     :root {
       color-scheme: light;
-      --bg: #fafafa;
+      --bg: #f7f7f7;
       --border: #ccc;
       --text: #333;
     }
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
     body {
       margin: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue",
-        Arial, sans-serif;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
       background: var(--bg);
       color: var(--text);
     }
@@ -27,6 +23,8 @@
     }
     main {
       padding: 0 1rem 1rem;
+      max-width: 960px;
+      margin: 0 auto;
     }
     #controls {
       margin-bottom: 0.5rem;
@@ -34,8 +32,6 @@
       flex-wrap: wrap;
       gap: 0.5rem;
       align-items: center;
-    }
-    #controls label {
       font-size: 0.9rem;
     }
     #controls select,
@@ -43,34 +39,29 @@
       font-size: 0.9rem;
       padding: 0.2rem 0.4rem;
     }
-    #viewer-container {
+    #canvas-wrapper {
       border: 1px solid var(--border);
       background: #fff;
-      width: 100%;
-      height: 70vh;
       position: relative;
+      width: 100%;
+      aspect-ratio: 4 / 3;
     }
-    #three-canvas {
+    #field-canvas {
       width: 100%;
       height: 100%;
       display: block;
     }
     footer {
       font-size: 0.8rem;
-      padding: 0.5rem 1rem 1rem;
+      padding: 0.5rem 0;
       color: #555;
     }
   </style>
-
-  <!-- Three.js（UMD版）と OrbitControls を CDN から読み込み -->
-  <script src="https://unpkg.com/three@0.164.0/build/three.min.js"></script>
-  <script src="https://unpkg.com/three@0.164.0/examples/js/controls/OrbitControls.js"></script>
 </head>
 <body>
   <header>
-    <h1>3D 電場可視化（点電荷）</h1>
+    <h1>2D 電場ベクトル可視化（点電荷）</h1>
   </header>
-
   <main>
     <section id="controls">
       <label>
@@ -81,263 +72,197 @@
           <option value="delete">電荷を削除</option>
         </select>
       </label>
-
-      <label>
-        表示：
-        <select id="view-mode-select">
-          <option value="3d">3D 視点</option>
-          <option value="2d">2D（XY 平面俯瞰）</option>
-        </select>
-      </label>
-
-      <button id="dipole-btn">双極子を中央に配置</button>
-      <button id="clear-btn">すべての電荷を消去</button>
+      <button id="clear-btn">電荷をすべて消去</button>
+      <button id="dipole-btn">中央に双極子を配置</button>
     </section>
 
-    <section id="viewer-container">
-      <!-- Three.js がこの canvas に描画 -->
-      <canvas id="three-canvas"></canvas>
+    <section id="canvas-wrapper">
+      <canvas id="field-canvas"></canvas>
     </section>
+
+    <footer>
+      キャンバス上をクリックして電荷を追加／削除します。矢印の向きが電場の向き、長さと色が電場の大きさを表します。
+    </footer>
   </main>
 
-  <footer>
-    使い方：キャンバス上をクリックして電荷を追加／削除します。3D 視点ではドラッグで視点移動、ホイールでズームできます。
-  </footer>
-
   <script>
-    // ====== DOM 取得 ======
-    const canvas = document.getElementById("three-canvas");
+    // ===== DOM 取得 =====
+    const canvas = document.getElementById("field-canvas");
+    const wrapper = document.getElementById("canvas-wrapper");
     const modeSelect = document.getElementById("mode-select");
-    const viewModeSelect = document.getElementById("view-mode-select");
     const clearBtn = document.getElementById("clear-btn");
     const dipoleBtn = document.getElementById("dipole-btn");
 
-    // ====== Three.js 基本セットアップ ======
-    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-    renderer.setPixelRatio(window.devicePixelRatio || 1);
+    // ===== 状態 =====
+    const charges = []; // {x, y, q}  canvas 座標, q=+1/-1
 
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xffffff);
+    // ===== Canvas 初期化 =====
+    const ctx = canvas.getContext("2d");
+    let width = 0;
+    let height = 0;
 
-    const camera = new THREE.PerspectiveCamera(
-      50,
-      1,
-      0.1,
-      2000
-    );
-    camera.position.set(200, 200, 200);
-
-    const controls = new THREE.OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-
-    // ライト
-    scene.add(new THREE.AmbientLight(0xffffff, 0.8));
-
-    // 軸 (X: 赤, Y: 緑, Z: 青)
-    const axes = new THREE.AxesHelper(150);
-    scene.add(axes);
-
-    // クリック用の平面 (z=0)
-    const clickPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
-    const raycaster = new THREE.Raycaster();
-    const mouse = new THREE.Vector2();
-
-    // ====== 電荷と電場ベクトル管理 ======
-    const charges = []; // { mesh, q }
-    let arrows = []; // THREE.ArrowHelper の配列
-
-    const chargeGeometry = new THREE.SphereGeometry(4, 16, 16);
-
-    function addCharge(position, q) {
-      const material = new THREE.MeshBasicMaterial({
-        color: q > 0 ? 0xff0000 : 0x0000ff,
-      });
-      const mesh = new THREE.Mesh(chargeGeometry, material);
-      mesh.position.copy(position);
-      scene.add(mesh);
-      charges.push({ mesh, q });
+    function resizeCanvas() {
+      // wrapper の表示サイズに合わせてキャンバスを調整
+      const rect = wrapper.getBoundingClientRect();
+      width = rect.width;
+      height = rect.height;
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      draw();
     }
 
-    function deleteNearestCharge(position) {
-      if (charges.length === 0) return;
-      let bestIndex = -1;
-      let bestDist = 10; // 近さの閾値
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
 
-      charges.forEach((c, i) => {
-        const d = c.mesh.position.distanceTo(position);
-        if (d < bestDist) {
-          bestDist = d;
-          bestIndex = i;
-        }
-      });
-
-      if (bestIndex >= 0) {
-        scene.remove(charges[bestIndex].mesh);
-        charges.splice(bestIndex, 1);
-      }
-    }
-
-    function clearCharges() {
-      for (const c of charges) {
-        scene.remove(c.mesh);
-      }
-      charges.length = 0;
-    }
-
-    // ====== 電場計算：3D クーロンの法則 ======
-    function computeElectricField(point) {
-      let Ex = 0,
-        Ey = 0,
-        Ez = 0;
-      const soft = 5; // 発散回避
+    // ===== 電場計算 =====
+    function computeFieldAt(x, y) {
+      let Ex = 0;
+      let Ey = 0;
+      const soft = 10; // r=0での発散緩和
 
       for (const c of charges) {
-        const dx = point.x - c.mesh.position.x;
-        const dy = point.y - c.mesh.position.y;
-        const dz = point.z - c.mesh.position.z;
-
-        const r2 = dx * dx + dy * dy + dz * dz + soft * soft;
+        const dx = x - c.x;
+        const dy = y - c.y;
+        const r2 = dx*dx + dy*dy + soft*soft;
         const r = Math.sqrt(r2);
-        const fac = c.q / (r2 * r); // ~ q * r / |r|^3
-
-        Ex += fac * dx;
-        Ey += fac * dy;
-        Ez += fac * dz;
+        const factor = c.q / (r2 * r); // ~ q * r / r^3
+        Ex += factor * dx;
+        Ey += factor * dy;
       }
-      return new THREE.Vector3(Ex, Ey, Ez);
+      return { Ex, Ey };
     }
 
-    // ====== 電場ベクトル矢印の再描画 ======
-    function updateFieldArrows() {
-      // 既存の矢印を削除
-      for (const a of arrows) {
-        scene.remove(a);
-      }
-      arrows = [];
+    // ===== 描画メイン =====
+    function draw() {
+      ctx.clearRect(0, 0, width, height);
 
-      // サンプル点を XY 平面上の格子にとる
-      const range = 150;
-      const step = 30;
+      drawField();
+      drawCharges();
+    }
 
+    function drawField() {
+      const gridStep = 40; // 矢印の間隔
       const samples = [];
       let maxE = 0;
 
-      for (let x = -range; x <= range; x += step) {
-        for (let y = -range; y <= range; y += step) {
-          const pos = new THREE.Vector3(x, y, 0);
-          const E = computeElectricField(pos);
-          const mag = E.length();
-          if (mag > maxE) maxE = mag;
-          samples.push({ pos, E, mag });
+      // サンプル点で電場を計算して最大値を調べる
+      for (let y = gridStep / 2; y < height; y += gridStep) {
+        for (let x = gridStep / 2; x < width; x += gridStep) {
+          const { Ex, Ey } = computeFieldAt(x, y);
+          const E = Math.sqrt(Ex*Ex + Ey*Ey);
+          maxE = Math.max(maxE, E);
+          samples.push({ x, y, Ex, Ey, E });
         }
       }
 
       if (maxE === 0) return;
 
-      const maxLen = 20; // 矢印の最大長
+      const maxArrowLength = 20;
 
       for (const s of samples) {
-        if (s.mag < 1e-6) continue;
-        const len = (s.mag / maxE) * maxLen; // ★ 電場強度に比例
-        const dir = s.E.clone().normalize();
+        if (s.E === 0) continue;
+        const scale = (s.E / maxE) * maxArrowLength; // ★ 電場に比例
+        const ux = (s.Ex / s.E) * scale;
+        const uy = (s.Ey / s.E) * scale;
 
-        const color = new THREE.Color(
-          `hsl(${240 - 240 * (s.mag / maxE)}, 100%, 50%)`
-        );
+        const t = Math.min(1, s.E / maxE);
+        const hue = 240 - 240 * t; // 0..maxE を 青→赤 にマップ
+        ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
 
-        const arrow = new THREE.ArrowHelper(dir, s.pos, len, color);
-        arrows.push(arrow);
-        scene.add(arrow);
+        drawArrow(s.x, s.y, ux, uy);
       }
     }
 
-    // ====== クリックで電荷を操作 ======
-    function onCanvasClick(event) {
-      const rect = renderer.domElement.getBoundingClientRect();
-      mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-      mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    function drawArrow(x, y, vx, vy) {
+      const len = Math.sqrt(vx*vx + vy*vy);
+      if (len < 1e-3) return;
+      const angle = Math.atan2(vy, vx);
+      const head = 5;
 
-      raycaster.setFromCamera(mouse, camera);
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle);
 
-      const intersectionPoint = new THREE.Vector3();
-      const hit = raycaster.ray.intersectPlane(clickPlane, intersectionPoint);
+      ctx.beginPath();
+      ctx.moveTo(-len/2, 0);
+      ctx.lineTo(len/2, 0);
+      ctx.lineTo(len/2 - head, head);
+      ctx.moveTo(len/2, 0);
+      ctx.lineTo(len/2 - head, -head);
+      ctx.stroke();
 
-      if (!hit) return;
+      ctx.restore();
+    }
 
+    function drawCharges() {
+      const r = 8;
+      for (const c of charges) {
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, r, 0, Math.PI*2);
+        ctx.fillStyle = c.q > 0 ? "red" : "blue";
+        ctx.fill();
+        ctx.strokeStyle = "#333";
+        ctx.stroke();
+      }
+    }
+
+    // ===== ユーザ操作 =====
+    function getCanvasPos(evt) {
+      const rect = canvas.getBoundingClientRect();
+      const x = evt.clientX - rect.left;
+      const y = evt.clientY - rect.top;
+      return { x, y };
+    }
+
+    canvas.addEventListener("click", (evt) => {
+      const { x, y } = getCanvasPos(evt);
       const mode = modeSelect.value;
+
       if (mode === "add-positive") {
-        addCharge(intersectionPoint, +1);
+        charges.push({ x, y, q: +1 });
       } else if (mode === "add-negative") {
-        addCharge(intersectionPoint, -1);
+        charges.push({ x, y, q: -1 });
       } else if (mode === "delete") {
-        deleteNearestCharge(intersectionPoint);
+        const threshold2 = 15*15;
+        let bestIndex = -1;
+        let bestD2 = threshold2;
+
+        charges.forEach((c, i) => {
+          const dx = c.x - x;
+          const dy = c.y - y;
+          const d2 = dx*dx + dy*dy;
+          if (d2 < bestD2) {
+            bestD2 = d2;
+            bestIndex = i;
+          }
+        });
+
+        if (bestIndex >= 0) {
+          charges.splice(bestIndex, 1);
+        }
       }
-
-      updateFieldArrows();
-    }
-
-    renderer.domElement.addEventListener("click", onCanvasClick);
-
-    // ====== ビュー切替（3D / 2D 投影） ======
-    function updateViewMode() {
-      const mode = viewModeSelect.value;
-      if (mode === "2d") {
-        // XY 平面を真上から見る
-        camera.position.set(0, 0, 400);
-        camera.up.set(0, 1, 0);
-        camera.lookAt(0, 0, 0);
-        controls.enableRotate = false;
-      } else {
-        camera.position.set(200, 200, 200);
-        camera.up.set(0, 0, 1);
-        camera.lookAt(0, 0, 0);
-        controls.enableRotate = true;
-      }
-      controls.update();
-    }
-
-    viewModeSelect.addEventListener("change", () => {
-      updateViewMode();
+      draw();
     });
 
-    // ====== ボタン操作 ======
     clearBtn.addEventListener("click", () => {
-      clearCharges();
-      updateFieldArrows();
+      charges.length = 0;
+      draw();
     });
 
     dipoleBtn.addEventListener("click", () => {
-      clearCharges();
-      const d = 40;
-      addCharge(new THREE.Vector3(-d, 0, 0), +1);
-      addCharge(new THREE.Vector3(+d, 0, 0), -1);
-      updateFieldArrows();
+      charges.length = 0;
+      const cx = width / 2;
+      const cy = height / 2;
+      const d = 60;
+      charges.push({ x: cx - d, y: cy, q: +1 });
+      charges.push({ x: cx + d, y: cy, q: -1 });
+      draw();
     });
 
-    // ====== リサイズ対応 ======
-    function resizeRenderer() {
-      const container = document.getElementById("viewer-container");
-      const width = container.clientWidth;
-      const height = container.clientHeight;
-      renderer.setSize(width, height, false);
-      camera.aspect = width / height;
-      camera.updateProjectionMatrix();
-    }
-
-    window.addEventListener("resize", resizeRenderer);
-
-    // ====== アニメーションループ ======
-    function animate() {
-      requestAnimationFrame(animate);
-      controls.update();
-      renderer.render(scene, camera);
-    }
-
-    // 初期化
-    resizeRenderer();
-    updateViewMode();
-    updateFieldArrows();
-    animate();
+    // 初回描画
+    draw();
   </script>
 </body>
 </html>
