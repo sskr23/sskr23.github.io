@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>自由落下シミュレーター - 運動方程式</title>
+    <style>
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; text-align: center; background: #f8f9fa; margin: 0; padding: 10px; color: #333; }
+        canvas { background: #fff; border-bottom: 4px solid #444; max-width: 100%; height: auto; touch-action: none; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        
+        .equation-container {
+            display: flex;
+            justify-content: space-around;
+            padding: 15px 0;
+            background: #fff;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        .eq-box { flex: 1; display: flex; align-items: center; justify-content: center; font-family: serif; font-style: italic; font-size: 20px; }
+        .red { color: #e74c3c; }
+        .blue { color: #3498db; }
+        .dynamic-m { font-weight: bold; transition: font-size 0.2s; }
+
+        .controls { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 10px; padding: 15px; background: #fff; border-radius: 10px; }
+        .slider-group { display: flex; align-items: center; gap: 10px; width: 100%; max-width: 450px; }
+        .slider-group label { flex: 1.5; text-align: left; font-size: 14px; font-weight: bold; }
+        input[type="range"] { flex: 2; cursor: pointer; }
+        .val-display { flex: 0.5; font-family: monospace; text-align: right; font-size: 18px;}
+        
+        button { padding: 12px 40px; font-size: 18px; cursor: pointer; background: #28a745; color: white; border: none; border-radius: 30px; transition: 0.2s; margin-top: 10px; }
+        button:active { transform: scale(0.95); background: #218838; }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+
+    <h2>自由落下シミュレーター</h2>
+    どちらが先に地面に着くかを確認しましょう。<br>
+
+    <canvas id="canvas"></canvas>
+
+    <div class="equation-container">
+        <div class="eq-box red" id="eq1">
+            <span class="dynamic-m" id="m1_font1">\(m_1\)</span>
+            <span>\(\vec{a}= \vec{F} = \)</span>
+            <span class="dynamic-m" id="m1_font2">\(m_1\)</span>
+            <span>\(\vec{g}\)</span>
+        </div>
+        <div class="eq-box blue" id="eq2">
+            <span class="dynamic-m" id="m2_font">\(m_2\)</span>
+            <span>\(\vec{a} = \vec{F} = \)</span>
+            <span class="dynamic-m" id="m2_font">\(m_2\)</span>
+            <span>\(\vec{g}\)</span>
+        </div>
+    </div>
+
+    <div class="controls">
+        <div class="slider-group">
+            <label>高さ \(h\) (1-15m):</label>
+            <input type="range" id="height" min="1" max="15" step="0.1" value="10">
+            <span class="val-display"><span id="h_val">10</span> m</span>
+        </div>
+        <div class="slider-group">
+            <label class="red">質量 \(m_1\) (0.1-10kg):</label>
+            <input type="range" id="mass1" min="0.1" max="10" step="0.1" value="1.0">
+            <span class="val-display"><span id="m1_val" style="color:#e74c3c">1.0</span> kg</span>
+        </div>
+        <div class="slider-group">
+            <label class="blue">質量 \(m_2\) (0.1-10kg):</label>
+            <input type="range" id="mass2" min="0.1" max="10" step="0.1" value="1.0">
+            <span class="val-display"><span id="m2_val" style="color:#3498db">1.0</span> kg</span>
+        </div>
+        <button id="startBtn">スタート</button>
+        
+        質量 \(m_1\) と \(m_2\) を変えても、両方同時に着地します。
+
+        これは運動方程式
+        \[\vec{a} = \frac{\vec{F}}{m} = \vec{g}\]
+        により、質量に依存しないことが分かります。
+        
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 物理定数・設定
+        const G = 9.80665;
+        const WORLD_HEIGHT_M = 20;
+        const PIXELS_PER_METER = 20; 
+        const CANVAS_WIDTH = 320;
+        const CANVAS_HEIGHT = WORLD_HEIGHT_M * PIXELS_PER_METER;
+
+        canvas.width = CANVAS_WIDTH;
+        canvas.height = CANVAS_HEIGHT;
+
+        let startTime = null;
+        let isRunning = false;
+
+        const hSlider = document.getElementById('height');
+        const m1Slider = document.getElementById('mass1');
+        const m2Slider = document.getElementById('mass2');
+        const startBtn = document.getElementById('startBtn');
+
+        function updateUI() {
+            const h = hSlider.value;
+            const m1 = m1Slider.value;
+            const m2 = m2Slider.value;
+
+            document.getElementById('h_val').innerText = h;
+            document.getElementById('m1_val').innerText = parseFloat(m1).toFixed(1);
+            document.getElementById('m2_val').innerText = parseFloat(m2).toFixed(1);
+
+            // フォントサイズの変更 (最小12px, 最大48px程度にスケーリング)
+            document.getElementById('m1_font1').style.fontSize = (18 + m1 * 3.5) + "px";
+            document.getElementById('m1_font2').style.fontSize = (18 + m1 * 3.5) + "px"; 
+            document.getElementById('m2_font').style.fontSize = (18 + m2 * 3.5) + "px";
+        }
+
+        function draw(timeOffset = 0) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 地面の描画
+            ctx.strokeStyle = "#444";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height);
+            ctx.lineTo(canvas.width, canvas.height);
+            ctx.stroke();
+
+            const h = parseFloat(hSlider.value);
+            const m1 = parseFloat(m1Slider.value);
+            const m2 = parseFloat(m2Slider.value);
+            
+            let fallDist = 0.5 * G * Math.pow(timeOffset, 2);
+            if (fallDist > h) fallDist = h;
+
+            const startY = (WORLD_HEIGHT_M - h) * PIXELS_PER_METER;
+            const currentY = startY + (fallDist * PIXELS_PER_METER);
+
+            // 質点1 (左)
+            drawMass(100, currentY, m1, "#e74c3c");
+            // 質点2 (右)
+            drawMass(220, currentY, m2, "#3498db");
+
+            if (fallDist >= h && isRunning) {
+                isRunning = false;
+                startBtn.innerText = "リセット";
+            }
+        }
+
+        function drawMass(x, y, mass, color) {
+            const radius = 5 + mass * 2.5; // 質量に応じて見た目を変える
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.fill();
+            ctx.closePath();
+        }
+
+        function animate(timestamp) {
+            if (!startTime) startTime = timestamp;
+            const elapsed = (timestamp - startTime) / 1000;
+            draw(elapsed);
+            if (isRunning) requestAnimationFrame(animate);
+        }
+
+        startBtn.addEventListener('click', () => {
+            if (isRunning) return;
+            if (startBtn.innerText === "リセット") {
+                startTime = null;
+                draw(0);
+                startBtn.innerText = "スタート";
+                startBtn.style.background = "#28a745";
+            } else {
+                isRunning = true;
+                startTime = null;
+                startBtn.innerText = "落下中...";
+                startBtn.style.background = "#6c757d";
+                requestAnimationFrame(animate);
+            }
+        });
+
+        [hSlider, m1Slider, m2Slider].forEach(s => s.addEventListener('input', () => {
+            if (!isRunning) {
+                updateUI();
+                draw(0);
+            }
+        }));
+
+        // 初期化
+        updateUI();
+        draw(0);
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>
