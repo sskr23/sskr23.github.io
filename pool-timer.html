@@ -99,8 +99,29 @@
             width: 300px;
         }
 
+        #buttonSA {
+            height: 50px;
+            width: 300px;
+        }
+
+        #buttonFA {
+            height: 60px;
+            width: 300px;
+        }
+
+        #buttonFB {
+            height: 60px;
+            width: 300px;
+        }
+
+
         #buttonB {
             height: 100px;
+            width: 300px;
+        }
+
+        #buttonSB {
+            height: 50px;
             width: 300px;
         }
     </style>
@@ -116,14 +137,18 @@
         let cctimer_B = null;
         let isAextended = false;
         let isBextended = false;
-        let nameA = "";
-        let nameB = "";
+        let isAsafed = false;
+        let isBsafed = false;
+        let nameA = "Player A";
+        let nameB = "Player B";
+        let nsetA = 0;
+        let nsetB = 0;
         let cctlength_A = 0;
         let cctlength_B = 0;
         let cctlength_use = 0;
         let cctlength_set = null;
         let extlength_use = 0;
-        let extlength_set = null; 
+        let extlength_set = null;
         let isCCworking = false;
         const cctlength_default = 1500;
         const extlength_default = 40;
@@ -413,7 +438,7 @@
         }
 
         function extentA() {
-            if (isAextended == false){
+            if (isAextended == false) {
                 stlength = stlength + Number(extlength_use);
                 //document.getElementById("extime-debug").innerText = `${extlength_use}`;
                 document.getElementById("exbuttonA").style.background = "#888888";
@@ -424,10 +449,54 @@
             }
         }
 
+        function safeA() {
+            if (isAsafed == false) {
+                //stlength = stlength + Number(extlength_use);
+                //document.getElementById("extime-debug").innerText = `${extlength_use}`;
+                document.getElementById("buttonFA").style.background = "#888888";
+                isAsafed = true;
+                //countSound.pause();
+                //countSound.currentTime = 0;
+                //isCalling = false;
+            } else if (isAsafed == true) {
+                document.getElementById("buttonFA").style.background = "#d2d2d2";
+                isAsafed = false;
+            } else {
+
+            }
+        }
+
+        function setA() {
+            nsetA = nsetA + 1;
+            document.getElementById("buttonA").innerText = `${nameA}: ${nsetA} set`;
+        }
+
+
+        function setB() {
+            nsetB = nsetB + 1;
+            document.getElementById("buttonB").innerText = `${nameB}: ${nsetB} set`;
+        }
+        function safeB() {
+            if (isBsafed == false) {
+                //stlength = stlength + Number(extlength_use);
+                //document.getElementById("extime-debug").innerText = `${extlength_use}`;
+                document.getElementById("buttonFB").style.background = "#888888";
+                isBsafed = true;
+                //countSound.pause();
+                //countSound.currentTime = 0;
+                //isCalling = false;
+            } else if (isBsafed == true) {
+                document.getElementById("buttonFB").style.background = "#d2d2d2";
+                isBsafed = false;
+            } else {
+
+            }
+        }
+
         function extentB() {
-            if (isBextended == false){
+            if (isBextended == false) {
                 stlength = stlength + Number(extlength_use);
-                document.getElementById("exbuttonB").style.background = "#888888"; 
+                document.getElementById("exbuttonB").style.background = "#888888";
                 isBextended = true;
                 countSound.pause();
                 countSound.currentTime = 0;
@@ -435,14 +504,25 @@
 
             }
 
-        } 
+        }
+
+        function getSets(){
+            nsetA = Number(document.getElementById('csetA').value);
+            nsetB = Number(document.getElementById('csetB').value);
+            document.getElementById('buttonA').innerText = `${nameA}: ${nsetA} set`;
+            document.getElementById('buttonB').innerText = `${nameB}: ${nsetB} set`;
+        }
 
         function getNames() {
             mute_count_only_once();
             nameA = document.getElementById('nameA').value;
             nameB = document.getElementById('nameB').value;
-            document.getElementById('buttonA').innerText = `${nameA}`;
-            document.getElementById('buttonB').innerText = `${nameB}`;
+            document.getElementById('buttonA').innerText = `${nameA}: ${nsetA} set`;
+            document.getElementById('buttonB').innerText = `${nameB}: ${nsetB} set`;
+            document.getElementById('buttonSA').innerText = `Set ${nameA}`;
+            document.getElementById('buttonSB').innerText = `Set ${nameB}`;
+            document.getElementById('buttonFA').innerText = `セーフ ${nameA}`;
+            document.getElementById('buttonFB').innerText = `セーフ ${nameB}`;
             document.getElementById('exbuttonA').innerText = `extension ${nameA}`;
             document.getElementById('exbuttonB').innerText = `extension ${nameB}`;
         }
@@ -589,7 +669,7 @@
             document.getElementById('cct-display').innerText = `Default: ${cctlength_default / 60} 分`;
             document.getElementById('st-display').innerText = `Default: ${stlength_default} 秒`;
             document.getElementById('ext-display').innerText = `Default: ${extlength_default} 秒`;
-            
+
             document.getElementById("buttonB").style.background = "#ff0000";
             document.getElementById("buttonA").style.background = "#00ff00";
             //countSound.muted = true;
@@ -616,14 +696,18 @@
     <!--<button onclick="debugShow()">表示</button>-->
     <br />
     <button id="exbuttonA" onclick="extentA()">extention Player A</button>
-    <button id="exbuttonB" onclick="extentB()">extention Player B</button> 
-    <button onclick="extentReset()">extention リセット</button> 
+    <button id="exbuttonB" onclick="extentB()">extention Player B</button>
+    <button onclick="extentReset()">extention リセット</button>
 
     <h1>Chess Clock Timer</h1>
 
     <div id="cctime-display">00:00 - 00:00</div>
-    <button id="buttonA" onclick="disableA()">Player A</button>
-    <button id="buttonB" onclick="disableB()">Player B</button>
+    <button id="buttonA" onclick="disableA()">Player A: 0 set</button>
+    <button id="buttonB" onclick="disableB()">Player B: 0 set</button>
+    <br />
+    <button id="buttonSA" onclick="setA()">Set Player A</button>
+    <button id="buttonSB" onclick="setB()">Set Player B</button>
+
     <br />
     <div id="green" style="color: #00ff00;">⚫︎動作中</div>
     <div id="red" style="color: #ff0000;">⚫︎停止中</div>
@@ -632,8 +716,9 @@
     </button>
     <button onclick="executeTimers()">開始</button>
     <button onclick="clearTimers()">リセット</button>
-
-
+    <br />
+    <button id="buttonFA" onclick="safeA()">セーフ Player A</button>
+    <button id="buttonFB" onclick="safeB()">セーフ Player B</button>
 
     <h2>Configuration</h2>
 
@@ -644,7 +729,7 @@
         <option value=12>12 秒</option>
         <option value=30>30 秒</option>
         <option value=40>40 秒</option>
-        <option value=45>45 秒</option> 
+        <option value=45>45 秒</option>
         <option value=50>50 秒</option>
         <option value=70>70 秒</option>
         <option value=200>200 秒</option>
@@ -670,7 +755,7 @@
         <option value=30>30 秒</option>
         <option value=40>40 秒</option>
         <option value=45>45 秒</option>
-        <option value=50>50 秒</option> 
+        <option value=50>50 秒</option>
     </select>
     <br />
     <button onclick="getEXTLength()">設定</button>
@@ -683,10 +768,24 @@
     <input type="text" id="nameB" />
     <br />
     <button onclick="getNames()">設定</button>
+
+        <h3>セット数修正</h3>
+    プレイヤーA：
+    <input type="text" id="csetA" />
+    <br />
+    プレイヤーB：
+    <input type="text" id="csetB" />
+    <br />
+    <button onclick="getSets()">設定</button>
     <h3>debug messages for developers</h3>
     <div id="stime-debug">none</div>
     <div id="cctime-debug">none</div>
-    <div id="extime-debug">none</div> 
+    <div id="extime-debug">none</div>
+
+
+
+
+
 </body>
 
 </html>
